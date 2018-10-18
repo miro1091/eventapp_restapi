@@ -2,40 +2,9 @@ const express = require("express");
 const bodyParser = require('body-parser');
 const app = express();
 const cors = require('cors');
+const cfenv = require("cfenv");
 
-//zoznam udalosti
-const events = [
-    {
-        "name": "Divadelné predstavenie",
-        "date": "18 november",
-        "location": "Košice",
-        "image": "http://www.trebisov.sk/photogallery/2014/2014-02-28_divadlo_laaaska/004.jpg",
-        },
-        {
-        "name": "Divadelné predstavenie 2",
-        "date": "21 december",
-        "location": "Prešov",
-        "image": "http://www.trebisov.sk/photogallery/2014/2014-02-28_divadlo_laaaska/005.jpg",
-        },
-        {
-        "name": "Divadelné predstavenie 3",
-        "date": "14 januar",
-        "location": "Rožňava",
-        "image": "https://spisskabela.sk/wp-content/uploads/2017/12/20171217_172352_resized.jpg",
-        },
-        {
-        "name": "Divadelné predstavenie 4",
-        "date": "3 február",
-        "location": "Humenné",
-        "image": "http://www.trebisov.sk/photogallery/2014/2014-02-28_divadlo_laaaska/004.jpg",
-        },
-        {
-        "name": "Divadelné predstavenie 5",
-        "date": "9 september",
-        "location": "Trebišov",
-        "image": "http://www.trebisov.sk/photogallery/2014/2014-02-28_divadlo_laaaska/005.jpg",
-        }
-];
+let cloudant, mydb;
 
 //zoznam registrovanych pouzivatelov
 const users = [
@@ -61,12 +30,41 @@ const users = [
 ]
 
 app.use(cors());
+
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
+
+// parse application/json
 app.use(bodyParser.json());
 
 //home page
 app.get('/', (req, res) => {
     //get all events
-    res.json(events);
+
+    let names = [];
+    if(!mydb) {
+        console.log('not connected to db');
+        res.json(names);
+        return;
+    }
+
+    mydb.list({ include_docs: true }, function(err, body) {
+        if (!err) {
+        body.rows.forEach(function(row) {
+            if(row.doc.name){
+                names.push({
+                    id:row.doc._id,
+                    name:row.doc.name,
+                    date:row.doc.date,
+                    location:row.doc.location,
+                    img:row.doc.image
+                });
+            }
+        });
+        res.json(names);
+        }
+    });
+
 });
 
 app.get('/users', (req, res) => {
@@ -101,6 +99,7 @@ app.post('/register', (req, res) => {
 //login
 app.post('/login', (req, res) => {
     //bcrypt-nodejs
+
     res.send('login');
 });
 
@@ -146,6 +145,59 @@ app.delete('/profile/delete', (req, res) => {
     
     res.send('user profile');
 });
+ 
+app.post('/testdb', (req, res) => {
+
+    let userName = req.body.name;
+    let doc = { "name" : userName };
+    if(!mydb) {
+        console.log("No database.");
+    }
+
+    res.json(req.body.name);
+});
+
+
+// load local VCAP configuration  and service credentials
+let vcapLocal;
+
+try {
+  vcapLocal = require('./vcap-local.json');
+  console.log("Loaded local VCAP", vcapLocal);
+} catch (e) { }
+
+const appEnvOpts = vcapLocal ? { vcap: vcapLocal} : {}
+
+const appEnv = cfenv.getAppEnv(appEnvOpts);
+
+// Load the Cloudant library.
+let Cloudant = require('@cloudant/cloudant');
+if (appEnv.services['cloudantNoSQLDB'] || appEnv.getService(/cloudant/)) {
+
+  // Initialize database with credentials
+  if (appEnv.services['cloudantNoSQLDB']) {
+    // CF service named 'cloudantNoSQLDB'
+    cloudant = Cloudant(appEnv.services['cloudantNoSQLDB'][0].credentials);
+  } else {
+     // user-provided service with 'cloudant' in its name
+     cloudant = Cloudant(appEnv.getService(/cloudant/).credentials);
+  }
+} else if (process.env.CLOUDANT_URL){
+  cloudant = Cloudant(process.env.CLOUDANT_URL);
+}
+if(cloudant) {
+  //database name
+  let dbName = 'mydb';
+
+  // Create a new "mydb" database.
+  cloudant.db.create(dbName, function(err, data) {
+    if(!err) //err if database doesn't already exists
+      console.log("Created database: " + dbName);
+  });
+
+  // Specify the database we are going to use (mydb)...
+  mydb = cloudant.db.use(dbName);
+}
 
 app.listen(process.env.PORT || 3000, () => {
     console.log('app is running on port 3000');
