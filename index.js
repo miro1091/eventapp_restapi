@@ -51,13 +51,17 @@ app.get('/', (req, res) => {
     mydb.list({ include_docs: true }, function(err, body) {
         if (!err) {
         body.rows.forEach(function(row) {
-            if(row.doc.name){
+            if(row.doc.selector.type && row.doc.selector.type == 'event'){
                 names.push({
                     id:row.doc._id,
                     name:row.doc.name,
                     date:row.doc.date,
                     location:row.doc.location,
-                    img:row.doc.image
+                    img:row.doc.image,
+                    selector:{
+                        type:row.doc.selector.type
+                    },
+                    events:row.doc.events
                 });
             }
         });
