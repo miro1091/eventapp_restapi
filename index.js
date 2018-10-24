@@ -1,33 +1,11 @@
 const express = require("express");
 const bodyParser = require('body-parser');
+const bcrypt =  require('bcrypt-nodejs');
 const app = express();
 const cors = require('cors');
 const cfenv = require("cfenv");
 
 let cloudant, mydb;
-
-//zoznam registrovanych pouzivatelov
-const users = [
-    {
-        id: 1,
-        name: "Richard",
-        surname: "Rusnak",
-        email: "richard.rusnak@gmail.com",
-    },
-    {
-        id:2,
-        name: "Igor",
-        surname: "Savnko",
-        email: "igorsavko@gmail.com",
-    }
-    ,
-    {
-        id: 3,
-        name: "Martin",
-        surname: "Tovarnak",
-        email: "martintovarnak@gmail.com",
-    }
-]
 
 app.use(cors());
 
@@ -51,7 +29,7 @@ app.get('/', (req, res) => {
     mydb.list({ include_docs: true }, function(err, body) {
         if (!err) {
         body.rows.forEach(function(row) {
-            if(row.doc.selector.type && row.doc.selector.type == 'event'){
+           if(row.doc.selector.type && row.doc.selector.type == 'event'){
                 names.push({
                     id:row.doc._id,
                     name:row.doc.name,
@@ -96,15 +74,70 @@ app.delete('/event/delete/:id', (req, res) => {
 
 //register
 app.post('/register', (req, res) => {
+
+    let { name, email, password} = req.body;
     //bcrypt-nodejs
-    res.send('register');
+
+    let doc = { 
+        "name" : name,
+        "password": bcrypt.hashSync(password),
+        "email": email,
+        "selector": {
+            "type": "user"
+          }
+    };
+
+    if(!mydb) {
+        console.log("No database.");
+        response.send(doc);
+        return;
+    }
+    
+    mydb.insert(doc, function(err, body, header) {
+        if (err) {
+        console.log('[mydb.insert] ', err.message);
+        response.send("Error");
+        return;
+        }
+        doc._id = body.id;
+        response.send(doc);
+    });
+    
+    res.json(req.body);
 });
 
 //login
-app.post('/login', (req, res) => {
-    //bcrypt-nodejs
+app.get('/login', (req, res) => {
+    // bcrypt.compareSync("bacon", hash); // true
+    // bcrypt.compareSync("veggies", hash); // false
 
-    res.send('login');
+    //get all events
+
+    let { email, password } = req.body;
+
+    let users = [];
+    if(!mydb) {
+        console.log('not connected to db');
+        res.json(names);
+        return;
+    }
+
+    mydb.list({ include_docs: true }, function(err, body) {
+        if (!err) {
+        body.rows.forEach(function(row) {
+           if(row.doc.selector.type && row.doc.selector.type == 'user'){
+                users.push({
+                    id:row.doc._id,
+                    name:row.doc.name,
+                    password:row.doc.password,
+                    email:row.doc.email
+                });
+            }
+        });
+        res.json(users);
+        }
+    });
+
 });
 
 //kontakt
