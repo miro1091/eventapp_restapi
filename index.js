@@ -38,8 +38,7 @@ app.get('/', (req, res) => {
                     img:row.doc.image,
                     selector:{
                         type:row.doc.selector.type
-                    },
-                    events:row.doc.events
+                    }
                 });
             }
         });
@@ -89,21 +88,24 @@ app.post('/register', (req, res) => {
 
     if(!mydb) {
         console.log("No database.");
-        response.send(doc);
+        //response.send(doc);
+        res.status(400).json("unable to connect to db");
         return;
     }
     
     mydb.insert(doc, function(err, body, header) {
         if (err) {
-        console.log('[mydb.insert] ', err.message);
-        response.send("Error");
+        //console.log('[mydb.insert] ', err.message);
+        //response.send("Error");
+        res.status(400).json("unable to register user");
         return;
         }
         doc._id = body.id;
-        response.send(doc);
+        //response.send(doc);
+        res.status(200).json("success");
     });
     
-    res.json(req.body);
+    //res.json(req.body);
 });
 
 //login
