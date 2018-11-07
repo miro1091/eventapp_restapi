@@ -38,13 +38,12 @@ let registeredUsers = [];
 //home page
 app.get('/', (req, res) => {
     //get all events
+    let events = [];
 
     if(!mydb) {
-        res.status(400).json(events);
+        res.status(400).json({message:"cant connect to db"});
         return;
     }
-
-    let events = [];
 
     mydb.list({ include_docs: true }, function(err, body) {
         if (!err) {
@@ -53,9 +52,13 @@ app.get('/', (req, res) => {
                     events.push(row.doc);
                     }
                 });
-            res.json(events).status(200).json("events are loaded successfully");
+
+            res.status(200).json(events);
+            return;
         }
-        res.status(400).json(events)
+        
+        res.status(400);
+        return;
         
     });
 
@@ -106,14 +109,14 @@ app.post('/register', (req, res) => {
 
                 mydb.insert(doc, function(err, body, header) {
                     if (err) {
-                    res.status(400).json("unable to register user");
+                    res.status(400).json({message:"unable to register user"});
                     return;
                     }
-                    res.status(200).json("user registered successfully");
+                    res.status(200).json({message:"user registered successfully"});
                     return;
                 });
             }else{
-                res.status(400).json("unable to register user - invalid inputs");
+                res.status(400).json({message:"unable to register user - invalid inputs"});
                 return;
             }
         // }catch(error){
@@ -161,14 +164,14 @@ app.post('/login', (req, res) => {
                 const loginInfo = {
                     userId: loginValue
                 }
-                res.status(200).json(loginInfo);
+                res.json(loginInfo);
             }else{
-                res.status(400).json("unable to login user - invalid inputs");
+                res.status(400).json({message:"uunable to login user - invalid inputs"});
                 return;
             }
 
     }).catch(err=>{
-        res.status(400).json('promise error');
+        res.status(400).json({message:"promise error"});
         return;
     })
 
