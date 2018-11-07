@@ -15,187 +15,161 @@ app.use(bodyParser.urlencoded({ extended: false }))
 // parse application/json
 app.use(bodyParser.json());
 
+let registeredUsers = [];
+
+    const getUsersfromDb = () => {
+
+        return new Promise((resolve, reject)=>{
+            mydb.list({ include_docs: true }, function(err, body) {
+                if (!err) {
+                    body.rows.map(row => {
+                        if(row.doc.selector.type && row.doc.selector.type === 'user'){
+                            registeredUsers.push(row.doc);
+                            }
+                        });
+                    resolve();
+                }
+                    reject();
+                
+            });
+        })
+    }
+
 //home page
 app.get('/', (req, res) => {
     //get all events
 
-    let names = [];
     if(!mydb) {
-        console.log('not connected to db');
-        res.json(names);
+        res.status(400).json(events);
         return;
     }
 
+    let events = [];
+
     mydb.list({ include_docs: true }, function(err, body) {
         if (!err) {
-        body.rows.forEach(function(row) {
-           if(row.doc.selector.type && row.doc.selector.type == 'event'){
-                names.push({
-                    id:row.doc._id,
-                    name:row.doc.name,
-                    date:row.doc.date,
-                    location:row.doc.location,
-                    img:row.doc.image,
-                    selector:{
-                        type:row.doc.selector.type
+            body.rows.map(row => {
+                if(row.doc.selector.type && row.doc.selector.type === 'event'){
+                    events.push(row.doc);
                     }
                 });
-            }
-        });
-        res.json(names);
+            res.json(events).status(200).json("events are loaded successfully");
         }
+        res.status(400).json(events)
+        
     });
 
 });
 
-app.get('/users', (req, res) => {
-    //get all events
-    res.json(users);
-});
-
-//specific event
-app.get('/event/:id', (req, res) => {
-    
-    res.send('detail event page');
-});
-
-//specific event - edit
-app.put('/event/edit/:id', (req, res) => {
-    
-    res.send('event edit');
-});
-
-//specific event - delete
-app.delete('/event/delete/:id', (req, res) => {
-    
-    res.send('event delete');
-});
-
-//register
 app.post('/register', (req, res) => {
 
-    let { name, email, password} = req.body;
-    //bcrypt-nodejs
+    const validateUserRegisterInfo = (name, password, email, usersInDb) => {
 
-    let doc = { 
-        "name" : name,
-        "password": bcrypt.hashSync(password),
-        "email": email,
-        "selector": {
-            "type": "user"
-          }
-    };
+        if(name.length < 1 || password.length < 1 || email.length < 1){
+            return 0;
+        }
+
+        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        if(!re.test(String(email).toLowerCase())){
+            return 0;
+        }
+
+        for(let i = 0; i < usersInDb.length; i++){
+            if(usersInDb[i].email === email){
+                return 0;
+            }
+        }
+
+        return 1;
+    }
 
     if(!mydb) {
-        console.log("No database.");
-        //response.send(doc);
         res.status(400).json("unable to connect to db");
         return;
     }
-    
-    mydb.insert(doc, function(err, body, header) {
-        if (err) {
-        //console.log('[mydb.insert] ', err.message);
-        //response.send("Error");
-        res.status(400).json("unable to register user");
+
+    getUsersfromDb().then(()=>{
+
+        let { name, email, password} = req.body;
+
+        // try{
+            if(validateUserRegisterInfo(name, password, email, registeredUsers)){
+
+                let doc = { 
+                    name,
+                    "password": bcrypt.hashSync(password),
+                    email,
+                    "selector": {
+                        "type": "user"
+                    }
+                };
+
+                mydb.insert(doc, function(err, body, header) {
+                    if (err) {
+                    res.status(400).json("unable to register user");
+                    return;
+                    }
+                    res.status(200).json("user registered successfully");
+                    return;
+                });
+            }else{
+                res.status(400).json("unable to register user - invalid inputs");
+                return;
+            }
+        // }catch(error){
+        //     res.status(400).json('error with connecting to db');
+        //     return;
+        // }
+
+    }).catch(err=>{
+        res.status(400).json('promise error');
         return;
-        }
-        doc._id = body.id;
-        //response.send(doc);
-        res.status(200).json("success");
-    });
-    
-    //res.json(req.body);
+    })
+
 });
 
-//login
-app.get('/login', (req, res) => {
-    // bcrypt.compareSync("bacon", hash); // true
-    // bcrypt.compareSync("veggies", hash); // false
-
-    //get all events
+app.post('/login', (req, res) => {
 
     let { email, password } = req.body;
 
-    let users = [];
-    if(!mydb) {
-        console.log('not connected to db');
-        res.json(names);
-        return;
-    }
+    const validateUserLoginInfo = (password, email, usersInDb) => {
 
-    mydb.list({ include_docs: true }, function(err, body) {
-        if (!err) {
-        body.rows.forEach(function(row) {
-           if(row.doc.selector.type && row.doc.selector.type == 'user'){
-                users.push({
-                    id:row.doc._id,
-                    name:row.doc.name,
-                    password:row.doc.password,
-                    email:row.doc.email
-                });
-            }
-        });
-        res.json(users);
+        if(password.length < 1 || email.length < 1){
+            return 0;
         }
-    });
 
-});
+        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        if(!re.test(String(email).toLowerCase())){
+            return 0;
+        }
 
-//kontakt
-app.post('/kontakt', (req, res) => {
-    
-    res.send('kontakt');
-});
+        for(let i = 0; i < usersInDb.length; i++){
+            if(usersInDb[i].email === email){
 
+                if(bcrypt.compareSync(password, usersInDb[i].password)){
+                    return 1;
+                }
+            }
+        }
 
-//specific event - chat
-app.get('/event/chat', (req, res) => {
-    
-    res.send('event chat');
-});
-
-//specific event - komentare
-app.get('/event/comments', (req, res) => {
-    
-    res.send('event comments');
-});
-
-//specific event - zdielanie
-app.get('/event/share', (req, res) => {
-    
-    res.send('share event');
-});
-
-//user profile
-app.get('/profile', (req, res) => {
-    
-    res.send('user profile');
-});
-
-//user profile - edit
-app.put('/profile/edit', (req, res) => {
-    
-    res.send('user profile');
-});
-
-//user profile - delete
-app.delete('/profile/delete', (req, res) => {
-    
-    res.send('user profile');
-});
- 
-app.post('/testdb', (req, res) => {
-
-    let userName = req.body.name;
-    let doc = { "name" : userName };
-    if(!mydb) {
-        console.log("No database.");
+        return 0;
     }
 
-    res.json(req.body.name);
-});
+    getUsersfromDb().then(()=>{
 
+            if(validateUserLoginInfo(password, email, registeredUsers)){
+                res.status(200).json('user login successfully');
+            }else{
+                res.status(400).json("unable to login user - invalid inputs");
+                return;
+            }
+
+    }).catch(err=>{
+        res.status(400).json('promise error');
+        return;
+    })
+
+});
 
 // load local VCAP configuration  and service credentials
 let vcapLocal;
