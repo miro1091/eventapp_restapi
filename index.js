@@ -147,7 +147,7 @@ app.post('/login', (req, res) => {
             if(usersInDb[i].email === email){
 
                 if(bcrypt.compareSync(password, usersInDb[i].password)){
-                    return 1;
+                    return usersInDb[i]._id;
                 }
             }
         }
@@ -156,9 +156,12 @@ app.post('/login', (req, res) => {
     }
 
     getUsersfromDb().then(()=>{
-
-            if(validateUserLoginInfo(password, email, registeredUsers)){
-                res.status(200).json('user login successfully');
+            const loginValue = validateUserLoginInfo(password, email, registeredUsers);
+            if(loginValue !== 0){
+                const loginInfo = {
+                    userId: loginValue
+                }
+                res.status(200).json(loginInfo);
             }else{
                 res.status(400).json("unable to login user - invalid inputs");
                 return;
