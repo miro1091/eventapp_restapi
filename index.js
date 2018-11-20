@@ -4,6 +4,7 @@ const bcrypt =  require('bcrypt-nodejs');
 const app = express();
 const cors = require('cors');
 const cfenv = require("cfenv");
+const UUID = require("uuid");
 
 let cloudant, mydb;
 
@@ -16,6 +17,7 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json());
 
 let registeredUsers = [];
+let events = [];
 
     const getUsersfromDb = () => {
 
@@ -35,32 +37,103 @@ let registeredUsers = [];
         })
     }
 
+    const getEventsFromDb = () => {
+
+        return new Promise((resolve, reject)=>{
+            mydb.list({ include_docs: true }, function(err, body) {
+                if (!err) {
+                    body.rows.map(row => {
+                        if(row.doc.selector.type && row.doc.selector.type === 'event'){
+                            events.push(row.doc);
+                            }
+                        });
+                    resolve();
+                }
+                    reject();
+                
+            });
+        })
+    }
+
 //home page
 app.get('/', (req, res) => {
     //get all events
-    let events = [];
-
+    
     if(!mydb) {
         res.status(400).json({message:"cant connect to db"});
         return;
     }
 
-    mydb.list({ include_docs: true }, function(err, body) {
-        if (!err) {
-            body.rows.map(row => {
-                if(row.doc.selector.type && row.doc.selector.type === 'event'){
-                    events.push(row.doc);
-                    }
-                });
-
-            res.status(200).json(events);
-            return;
-        }
-        
-        res.status(400);
+    getEventsFromDb().then(()=>{
+        res.status(200).json(events);
         return;
-        
-    });
+    }).catch(err=>{
+        res.status(400).json('promise error');
+        return;
+    })
+
+});
+
+//delete-event/:id
+//update-event/:id
+app.post('/create-event', (req, res) => {
+
+    const validateCreateEventInfo = (name, description, date, location, category, image) => {
+
+        if(
+            name.length < 1 || 
+            description.length < 1 || 
+            date.length < 1 ||
+            location.length < 1 ||
+            category.length < 1 ||
+            image.length < 1
+            ){
+            return 0;
+        }
+
+        return 1;
+    }
+
+    if(!mydb) {
+        res.status(400).json("unable to connect to db");
+        return;
+    }
+
+    getEventsFromDb().then(()=>{
+
+        let { name, description, date, location, category, image } = req.body;
+
+            if(validateCreateEventInfo(name, description, date, location, category, image)){
+
+                let doc = { 
+                    name,
+                    description,
+                    date,
+                    location,
+                    image,
+                    category,
+                    "selector": {
+                        "type": "event"
+                    }
+                };
+
+                mydb.insert(doc, function(err, body, header) {
+                    if (err) {
+                    res.status(400).json({message:"unable insert event"});
+                    return;
+                    }
+                    res.status(200).json({message:"event was inserted successfully"});
+                    return;
+                });
+            }else{
+                res.status(400).json({message:"unable to insert event - invalid inputs"});
+                return;
+            }
+
+    }).catch(err=>{
+        res.status(400).json('promise error');
+        return;
+    })
 
 });
 
@@ -95,7 +168,6 @@ app.post('/register', (req, res) => {
 
         let { name, email, password} = req.body;
 
-        // try{
             if(validateUserRegisterInfo(name, password, email, registeredUsers)){
 
                 let doc = { 
@@ -119,10 +191,6 @@ app.post('/register', (req, res) => {
                 res.status(400).json({message:"unable to register user - invalid inputs"});
                 return;
             }
-        // }catch(error){
-        //     res.status(400).json('error with connecting to db');
-        //     return;
-        // }
 
     }).catch(err=>{
         res.status(400).json('promise error');
