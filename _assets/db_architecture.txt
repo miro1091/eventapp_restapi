@@ -1,0 +1,68 @@
+//Architektura DB
+
+// [category] //kategorie eventov
+// -id (autoincrement)
+// -name
+// -link
+// -visible
+
+//[event_category]
+// -category_id
+// -event_id
+
+// [event]
+// -id (autoincrement)
+// -name
+// -date
+// -place
+// -interested //pocet zaujemcov
+// -category_id
+// -description
+// -visible
+// -created_at
+
+// [event_user]
+// -event_id
+// -user_id
+
+// [user]
+// -id (autoincrement)
+// -name
+// -surname
+// -login
+// -mail
+// -password
+// -registered (time of creation)
+// -visible
+// -event_counter //pocet zucastnenych eventov
+// -priatel_id
+// -event_id
+
+// [chat]
+// -event_id
+// -user_id
+// -visible
+// -created_at
+
+
+// [comments]
+// -event_id
+// -user_id
+// -visible
+// -quantity
+// -created_at
+
+// [shares]
+// -event_id
+// -visible
+// -created_at
+// -user_id
+
+
+// Review
+// -ReviewID (int)
+// -EventID (int)
+// -UserID (int)
+// -Comment (varchar)
+// -Date_Time_Comment (date)
+// -isDeleted (bool)
