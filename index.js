@@ -11,10 +11,10 @@ const server = http.createServer(app)
 const io = socketIO(server)
 
 io.on('connection', socket => {
-    console.log('User connected')
+    console.log(socket.id);
 
-    socket.on('disconnect', () => {
-        console.log('user disconnected')
+    socket.on('SEND_MESSAGE', function(data){
+        io.emit('RECEIVE_MESSAGE', data);
     })
 })
 
