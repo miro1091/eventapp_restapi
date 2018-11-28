@@ -6,6 +6,17 @@ const googleCalendarHandler = (email) => {
     var OAuth2 = google.auth.OAuth2
 
     //oauth2 goes here
+    const oauth2Client = new OAuth2(
+        "52937241797-ll34ifi5kofc0bus9d0pm9d0bcqe6jk1.apps.googleusercontent.com",
+        "t3fH5OYiRo27GeqUFbdQ55nd",
+        "urn:ietf:wg:oauth:2.0:oob"
+    );
+
+    oauth2Client.setCredentials({
+        access_token: "ya29.GltaBoot1rkKduZLCw0ngXgfVCQfB1ACyTWizu9SIBrvNBxZWX1tvyDfbueI-zj_vmaouLIq12I0Dg0f4VOhR8wHjd0n_JrGL73L8yMydyuY5SEGOwQPejN3DP0X",
+        refresh_token: "1/EKDsvwvhZpsqrxemYJs5EFcxpI461OOFAUH-X_SuRw4",
+        expiry_date: true
+    });
 
     var event = {
         'summary': "summary",
