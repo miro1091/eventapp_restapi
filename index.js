@@ -4,19 +4,21 @@ const app = express();
 const cors = require("cors");
 const UUID = require("uuid");
 const multer = require("multer");
-const http = require("http");
-const socketIO = require("socket.io");
+// const http = require("http");
+const socket = require("socket.io");
 
-const server = http.createServer(app);
-const io = socketIO(server);
+// const server = http.createServer(app);
+// const io = socketIO(server);
 
-io.on("connection", socket => {
-  console.log(socket.id);
+app.use(cors());
 
-  socket.on("SEND_MESSAGE", function(data) {
-    io.emit("RECEIVE_MESSAGE", data);
-  });
-});
+// io.on("connection", socket => {
+//   console.log(socket.id);
+
+//   socket.on("SEND_MESSAGE", function(data) {
+//     io.emit("RECEIVE_MESSAGE", data);
+//   });
+// });
 
 const dbConnect = require("./_assets/db_connect");
 let mydb = dbConnect();
@@ -43,7 +45,6 @@ const upload = multer({
  * multer [END]
  */
 
-app.use(cors());
 app.use(
   bodyParser.urlencoded({
     extended: false
@@ -153,6 +154,20 @@ app.post("/save-image", upload.single("selectedFile"), (req, res) => {
  * routes [END]
  */
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("app is running on port 3000");
+// app.listen(process.env.PORT || 3000, () => {
+//   console.log("app is running on port 3000");
+// });
+
+server = app.listen(process.env.PORT || 3000, function() {
+  console.log("server is running on port 3000");
+});
+
+io = socket(server);
+
+io.on("connection", socket => {
+  console.log(socket.id);
+
+  socket.on("SEND_MESSAGE", function(data) {
+    io.emit("RECEIVE_MESSAGE", data);
+  });
 });
