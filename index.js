@@ -4,21 +4,9 @@ const app = express();
 const cors = require("cors");
 const UUID = require("uuid");
 const multer = require("multer");
-// const http = require("http");
 const socket = require("socket.io");
 
-// const server = http.createServer(app);
-// const io = socketIO(server);
-
 app.use(cors());
-
-// io.on("connection", socket => {
-//   console.log(socket.id);
-
-//   socket.on("SEND_MESSAGE", function(data) {
-//     io.emit("RECEIVE_MESSAGE", data);
-//   });
-// });
 
 const dbConnect = require("./_assets/db_connect");
 let mydb = dbConnect();
@@ -41,6 +29,16 @@ const upload = multer({
   storage
 });
 
+// ukladat images do db
+// /* - index.html
+// .git nedavat na server (je to hacknutelne)
+// eventy - order by datum defaultne
+// main page - event: datum(icon),miesto(icon), cas(ico)
+// searching error - vyhladavanie aj textu s makcenami
+
+// prihlasenie, registracia - hlasky - zadali ste nespravne udaje
+// hladanie - prepacte, nenasli sa ziadne myslienky + nejake priklady, navies ako sa ma to pouzit - aby aplikacia bola sama vyzvetlujuca
+
 /**
  * multer [END]
  */
@@ -59,6 +57,10 @@ app.use(bodyParser.json());
 app.get("/", (req, res) => {
   const eventShowAll = require("./modules/event/showAll");
   eventShowAll(mydb, req, res);
+});
+
+app.get("/api/v1/user/profile/image", (req, res) => {
+  res.sendFile(__dirname + "/_assets/images/user/profile_image/mimon.jpg");
 });
 
 app.get("/find/:searchedString", (req, res) => {
